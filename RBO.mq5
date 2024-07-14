@@ -24,6 +24,7 @@ double highestPricePoint = NormalizeDouble(0, _Digits);
 double lowestPricePoint = NormalizeDouble(-1, _Digits);
 
 int barsSinceStartOfRange = 0;
+int rectCount = 0;
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -63,6 +64,8 @@ void OnTick()
          lowestPricePoint = iLow(_Symbol, PERIOD_CURRENT, firstBarIndex);
       }
       
+      
+      drawRangeRect(ChartID(), "RangeRectangle" + IntegerToString(rectCount), StringToTime(RangeTimeStart), lowestPricePoint, StringToTime(RangeTimeEnd), highestPricePoint);
       if(Bars(_Symbol, PERIOD_CURRENT, StringToTime(RangeTimeStart), StringToTime(RangeTimeEnd)) >
          barsSinceStartOfRange) {
             barsSinceStartOfRange = Bars(_Symbol, PERIOD_CURRENT, StringToTime(RangeTimeStart),
@@ -86,6 +89,7 @@ void OnTick()
       if(RangeTimeEnd == time) {
          rangeStarted = false;
          endOfRange = true;
+         rectCount++;
          //reset lowest and highest price points;
          int firstBarIndex = iBarShift(_Symbol, PERIOD_CURRENT, StringToTime(RangeTimeStart), true);
          if(firstBarIndex == 0) {
@@ -132,4 +136,38 @@ void OnTick()
       }
    }
   }
+  
+  
+  void drawRangeRect(long chartID, string name, datetime rangeStartTime, 
+      double lowPrice, datetime rangeEndtime, double highPrice) {
+      ENUM_OBJECT objectType = OBJ_RECTANGLE;
+      bool objCreated = ObjectCreate(chartID, name,
+      objectType,          
+      0,// window index
+      rangeStartTime,
+      lowPrice,
+      rangeEndtime,
+      highPrice
+      );
+      
+      ObjectSetInteger(chartID,name,OBJPROP_COLOR,clrCornflowerBlue); 
+   //--- set the style of rectangle lines 
+      ObjectSetInteger(chartID,name,OBJPROP_STYLE,STYLE_SOLID); 
+   //--- set width of the rectangle lines 
+      ObjectSetInteger(chartID,name,OBJPROP_WIDTH,1); 
+   //--- enable (true) or disable (false) the mode of filling the rectangle 
+      ObjectSetInteger(chartID,name,OBJPROP_FILL,true); 
+   //--- display in the foreground (false) or background (true) 
+      ObjectSetInteger(chartID,name,OBJPROP_BACK,true); 
+   //--- enable (true) or disable (false) the mode of highlighting the rectangle for moving 
+   //--- when creating a graphical object using ObjectCreate function, the object cannot be 
+   //--- highlighted and moved by default. Inside this method, selection parameter 
+   //--- is true by default making it possible to highlight and move the object 
+      ObjectSetInteger(chartID,name,OBJPROP_SELECTABLE,true); 
+      ObjectSetInteger(chartID,name,OBJPROP_SELECTED,false); 
+   //--- hide (true) or display (false) graphical object name in the object list 
+      ObjectSetInteger(chartID,name,OBJPROP_HIDDEN,false); 
+   //--- set the priority for receiving the event of a mouse click in the chart 
+      ObjectSetInteger(chartID,name,OBJPROP_ZORDER,0);
+   }
 //+------------------------------------------------------------------+
