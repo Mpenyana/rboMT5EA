@@ -13,7 +13,7 @@ CTrade trade;
 
 input string RangeTimeStart = "00:00";
 input string RangeTimeEnd = "07:00";
-input string endTradeTime = "23:00";
+input string endTradeTime = "14:00";
 input long Magic = 333;
 
 bool endOfRange = false;
@@ -43,10 +43,10 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
+bool allowBuyStop = false;
+bool allowSellStop = false;
 void OnTick()
   {
-
-   Print(OrdersTotal());
    datetime currentBarOpeningTime = iTime(_Symbol, PERIOD_CURRENT, 0);
    string time = TimeToString(currentBarOpeningTime, TIME_MINUTES);
    
@@ -65,7 +65,8 @@ void OnTick()
       }
       
       
-      drawRangeRect(ChartID(), "RangeRectangle" + IntegerToString(rectCount), StringToTime(RangeTimeStart), lowestPricePoint, StringToTime(RangeTimeEnd), highestPricePoint);
+      drawRangeRect(ChartID(), "RangeRectangle" + IntegerToString(rectCount), StringToTime(RangeTimeStart), 
+         lowestPricePoint, StringToTime(RangeTimeEnd), highestPricePoint);
       if(Bars(_Symbol, PERIOD_CURRENT, StringToTime(RangeTimeStart), StringToTime(RangeTimeEnd)) >
          barsSinceStartOfRange) {
             barsSinceStartOfRange = Bars(_Symbol, PERIOD_CURRENT, StringToTime(RangeTimeStart),
@@ -87,6 +88,9 @@ void OnTick()
    
    if(!endOfRange) {
       if(RangeTimeEnd == time) {
+      allowBuyStop = true;
+      allowSellStop = true;
+         Print("within the range");
          rangeStarted = false;
          endOfRange = true;
          rectCount++;
@@ -130,8 +134,16 @@ void OnTick()
       
       if(allowTrades) {
          if(easOrders < 1) {
-         trade.BuyStop(1, highestPricePoint, _Symbol, lowestPricePoint);
-         trade.SellStop(1, lowestPricePoint, _Symbol, highestPricePoint);
+         if(allowBuyStop) {
+            double bTP = SymbolInfoDouble(_Symbol, SYMBOL_BID) + 1000 * _Point;
+            trade.BuyStop(1, highestPricePoint, _Symbol, lowestPricePoint, bTP);
+            allowBuyStop = false;
+         }
+         if(allowSellStop) {
+            double sTP = SymbolInfoDouble(_Symbol, SYMBOL_ASK) - 1000 * _Point;
+            trade.SellStop(1, lowestPricePoint, _Symbol, highestPricePoint, sTP);
+            allowSellStop = false;
+         }
          }
       }
    }
@@ -170,4 +182,52 @@ void OnTick()
    //--- set the priority for receiving the event of a mouse click in the chart 
       ObjectSetInteger(chartID,name,OBJPROP_ZORDER,0);
    }
+   
+   /*
+      RStart (00:00)
+         (work/tasks to be run within the range)
+         Highest and Lowest Point to be updated with every tick
+         
+         if current bar is the first bar of the day (bar @ 0:00), initialize highest and lowest price points;
+         if current bar is not the first bar of the day (any other time within the range) use the previous bar's
+            highest and lowest price points if
+               if it's high is higher than the current highest value set;
+               if it's low is lower than the current lowest value set;
+            continue this while we are within the range;
+      REnd (07:00)
+      
+      TradingPeriod: (7:00)      
+         (work/tasks to be run within the trading period)
+         #Regularly:
+         - check # of Orders (Buy and Sell Stops)
+         - check # of Positions
+         - how do they compare to the limits?
+         - can we place orders?
+         
+         
+         get all Orders:
+            compare their magic #s
+            if they match EA's magic #
+               keep track of the order;
+               
+         if total orders belonging to the EA are less than the set order limit (being 2);
+            place BuyStop and SellStop orders @ highest Price Point and lowest Price Price point respectively;
+            increase the total # of orders
+            disable ability to place orders (buy and sell) until the next day;
+            lowest price point and highest price points should also be used as the Stop orders' Stop Losses;
+         
+      
+      TradingPeriodEnd: (23:00)
+      
+      PostRangeAndTradingSession (23:00 - 00:00)
+         (work/tasks to be run post range and trading periods)
+         - Close all active Positions and Orders;
+         - Reset any variables set in the initialization stage;
+         
+         get all Positions;
+         Compare their magic #s the EA's magic #
+         if match;
+            Close the position(s);
+   
+   */
 //+------------------------------------------------------------------+
