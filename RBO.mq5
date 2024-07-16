@@ -122,8 +122,7 @@ void OnTick()
      {
       int activePositions = checkActivePositionsByEA();
       int orders = checkOrdersByEA();
-
-      Print(StringFormat("Time is %s and end trade time is %s", time, endTradeTime));
+      
       if(time == endTradeTime)
         {
         Print("Time to close all opeations");
@@ -191,7 +190,6 @@ int checkOrdersByEA()
 //+------------------------------------------------------------------+
 void closePositionsAndOrders()
   {
-  Print("Attempt to close operations");
    for(int i = PositionsTotal() - 1; i >= 0; i--)
      {
       ulong positionTicket = PositionGetTicket(i);
@@ -256,6 +254,9 @@ void drawRangeRect(long chartID, string name, datetime rangeStartTime,
          1. As soon as we place the orders, we can nullify the highest and lowest price points, add a check
             of !null before we can place orders
          2. Add a global count variable that keeps track of the orders for the day.
+         
+         
+         
    RStart (00:00)
       (work/tasks to be run within the range)
       Highest and Lowest Point to be updated with every tick
